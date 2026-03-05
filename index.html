@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BlockGameTest</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <style>
-        body  {
+        body {
             margin: 0;
-            background: #050816; 
+            background: #050816;
             color: #fff;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
+
         #hud {
             position: absolute;
             left: 16px;
@@ -21,400 +23,490 @@
             gap: 12px;
             align-items: center;
         }
+
         .panel {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.06);
             padding: 10px 14px;
             border-radius: 10px;
             backdrop-filter: blur(6px);
-            color: #e6eef8; 
+            color: #e6eef8;
             font-weight: 600;
         }
+
         #controls {
-        position: absolute;
-        right: 16px;
-        top: 16px;
-        z-index: 10;
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            z-index: 10;
         }
+
         button {
-        background:#6a5cff;
-        color:white;
-        border:none;
-        padding:8px 12px;
-        border-radius:8px;
-        cursor:pointer;
-        font-weight:700;
+            background: #6a5cff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
         }
     </style>
 </head>
+
 <body>
-     <div id="hud">
-    <div class="panel" id="score">Score: 0</div>
-    <div class="panel" id="piecesLeft">Pieces left: 3</div>
-  </div>
-  <div id="controls">
-    <button id="resetBtn">Reset</button>
-  </div>
+    <div id="hud">
+        <div class="panel" id="score">Score: 0</div>
+        <div class="panel" id="piecesLeft">Pieces left: 3</div>
+    </div>
+    <div id="controls">
+        <button id="resetBtn">Reset</button>
+    </div>
 
-  <a-scene embedded vr-mode-ui="enabled: false" renderer="antialias: true; colorManagement: true" style="position:fixed; inset:0;">
-    <!-- camera fixed, no look controls -->
-    <a-entity position="0 4 10">
-      <a-camera look-controls="enabled: false"></a-camera>
-    </a-entity>
+    <a-scene embedded vr-mode-ui="enabled: false" renderer="antialias: true; colorManagement: true"
+        style="position:fixed; inset:0;">
+        <!-- camera fixed, no look controls -->
+        <a-entity position="0 4 10">
+            <a-camera look-controls="enabled: false"></a-camera>
+        </a-entity>
 
-    <!-- ambient neon sky -->
-    <a-sky color="#07102a" animation="property: rotation; to: 0 360 0; loop: true; dur: 90000"></a-sky>
+        <!-- ambient neon sky -->
+        <a-sky color="#07102a" animation="property: rotation; to: 0 360 0; loop: true; dur: 90000"></a-sky>
 
-    <!-- lights -->
-    <a-entity light="type: ambient; intensity: 0.6; color: #bcdcff"></a-entity>
-    <a-entity light="type: directional; intensity: 0.9; color: #ffffff" position="1 4 2"></a-entity>
+        <!-- lights -->
+        <a-entity light="type: ambient; intensity: 0.6; color: #bcdcff"></a-entity>
+        <a-entity light="type: directional; intensity: 0.9; color: #ffffff" position="1 4 2"></a-entity>
 
-    <!-- board platform -->
-    <a-cylinder position="0 0 0" radius="6" height="0.2" color="#0b1220" material="metalness:0.2; roughness:0.6"></a-cylinder>
-    <a-ring position="0 0.11 0" rotation="-90 0 0" radius-inner="5.2" radius-outer="5.6" color="#6a5cff" material="emissive:#6a5cff; emissiveIntensity:0.6"></a-ring>
+        <!-- board platform -->
+        <a-cylinder position="0 0 0" radius="6" height="0.2" color="#0b1220"
+            material="metalness:0.2; roughness:0.6"></a-cylinder>
+        <a-ring position="0 0.11 0" rotation="-90 0 0" radius-inner="5.2" radius-outer="5.6" color="#6a5cff"
+            material="emissive:#6a5cff; emissiveIntensity:0.6"></a-ring>
 
-    <!-- grid visual + logic -->
-    <a-entity id="board" grid-system="cols:8; rows:8; cellSize:0.9; originX:-3.15; originZ:-3.15"></a-entity>
+        <!-- grid visual + logic -->
+        <a-entity id="board" grid-system="cols:8; rows:8; cellSize:0.9; originX:-3.15; originZ:-3.15"></a-entity>
 
-    <!-- tray for three pieces -->
-    <a-entity id="tray" position="0 0.6 -5" piece-generator="tray:true"></a-entity>
+        <!-- tray for three pieces -->
+        <a-entity id="tray" position="0 0.6 -5" piece-generator="tray:true"></a-entity>
 
-    <!-- UI text in scene -->
-    <a-text value="ARVIN — BLOCK BLAST" position="-3.2 5 -1" color="#f8fafc" width="6" letter-spacing="6"></a-text>
-    <a-text id="hint" value="Drag pieces onto the board. Fill rows or columns to clear." position="-3.2 4.4 -1" color="#9ca3af" width="6"></a-text>
-     <script>
-      AFRAME.registerComponent('grid-system', {
-        schema: {
-          cols: {type: 'int', default: 8},
-          rows: {type: 'int', default: 8},
-          cellSize: {type: 'number', default: 0.9},
-          originX: {type: 'number', default: -3.15},
-          originZ: {type: 'number', default: -3.15}
-        },
-        init() {
-          const {cols, rows, cellSize, originX, originZ} = this.data;
-          this.cols = cols; this.rows = rows; this.cellSize = cellSize;
-          this.originX = originX; this.originZ = originZ;
-          this.grid = Array.from({length: rows}, () => Array(cols).fill(null));
-          this.drawCells();
-        },
-        drawCells() {
-          const el = this.el;
-          const {cols, rows, cellSize} = this;
-          for (let r=0;r<rows;r++){
-            for (let c=0;c<cols;c++){
-              const x = this.originX + c*cellSize + cellSize/2;
-              const z = this.originZ + r*cellSize + cellSize/2;
-              const cell = document.createElement('a-plane');
-              cell.setAttribute('position', `${x} 0.11 ${z}`);
-              cell.setAttribute('rotation', '-90 0 0');
-              cell.setAttribute('width', cellSize*0.95);
-              cell.setAttribute('height', cellSize*0.95);
-              cell.setAttribute('color', '#071428');
-              cell.setAttribute('material', 'opacity:0.6');
-              cell.classList.add('grid-cell');
-              el.appendChild(cell);
-            }
-          }
-        },
-        worldPosForCell(c, r) {
-          const x = this.originX + c*this.cellSize + this.cellSize/2;
-          const z = this.originZ + r*this.cellSize + this.cellSize/2;
-          return {x, y: 0.6, z};
-        },
-        cellForWorldPos(x, z) {
-          const c = Math.floor((x - this.originX) / this.cellSize);
-          const r = Math.floor((z - this.originZ) / this.cellSize);
-          if (c<0 || c>=this.cols || r<0 || r>=this.rows) return null;
-          return {c, r};
-        },
-        canPlace(shapeCells, baseC, baseR) {
-          for (const [dx, dy] of shapeCells) {
-            const c = baseC + dx, r = baseR + dy;
-            if (c<0 || c>=this.cols || r<0 || r>=this.rows) return false;
-            if (this.grid[r][c]) return false;
-          }
-          return true;
-        },
-        placePiece(shapeCells, baseC, baseR, color, entity) {
-          for (const [dx, dy] of shapeCells) {
-            const c = baseC + dx, r = baseR + dy;
-            const pos = this.worldPosForCell(c, r);
-            const cube = document.createElement('a-box');
-            cube.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-            cube.setAttribute('depth', 0.8); cube.setAttribute('height', 0.8); cube.setAttribute('width', 0.8);
-            cube.setAttribute('color', color);
-            cube.setAttribute('material', 'metalness:0.3; roughness:0.4');
-            cube.classList.add('board-block');
-            this.el.appendChild(cube);
-            this.grid[r][c] = {entity: cube, color};
-          }
-          if (entity && entity.parentNode) entity.parentNode.removeChild(entity);
-          this.el.emit('placed');
-        },
-        clearLines() {
-          const rowsToClear = [];
-          const colsToClear = [];
-          for (let r=0;r<this.rows;r++){
-            if (this.grid[r].every(cell => cell !== null)) rowsToClear.push(r);
-          }
-          for (let c=0;c<this.cols;c++){
-            let full = true;
-            for (let r=0;r<this.rows;r++) if (!this.grid[r][c]) { full = false; break; }
-            if (full) colsToClear.push(c);
-          }
-          const removed = rowsToClear.length + colsToClear.length;
-          if (removed === 0) return 0;
-          for (const r of rowsToClear) {
-            for (let c=0;c<this.cols;c++){
-              const cell = this.grid[r][c];
-              if (cell && cell.entity) cell.entity.parentNode.removeChild(cell.entity);
-              this.grid[r][c] = null;
-            }
-          }
-          for (const c of colsToClear) {
-            for (let r=0;r<this.rows;r++){
-              const cell = this.grid[r][c];
-              if (cell && cell.entity) cell.entity.parentNode.removeChild(cell.entity);
-              this.grid[r][c] = null;
-            }
-          }
-          for (let c=0;c<this.cols;c++){
-            let write = this.rows-1;
-            for (let r=this.rows-1;r>=0;r--){
-              if (this.grid[r][c]) {
-                if (write !== r) {
-                  const cell = this.grid[r][c];
-                  const pos = this.worldPosForCell(c, write);
-                  cell.entity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-                  this.grid[write][c] = cell;
-                  this.grid[r][c] = null;
+        <!-- UI text in scene -->
+        <a-text value="ARVIN — BLOCK BLAST" position="-3.2 5 -1" color="#f8fafc" width="6" letter-spacing="6"></a-text>
+        <a-text id="hint" value="Drag pieces onto the board. Fill rows or columns to clear." position="-3.2 4.4 -1"
+            color="#9ca3af" width="6"></a-text>
+        <script>
+            AFRAME.registerComponent('grid-system', {
+                schema: {
+                    cols: { type: 'int', default: 8 },
+                    rows: { type: 'int', default: 8 },
+                    cellSize: { type: 'number', default: 0.9 },
+                    originX: { type: 'number', default: -3.15 },
+                    originZ: { type: 'number', default: -3.15 }
+                },
+                init() {
+                    const { cols, rows, cellSize, originX, originZ } = this.data;
+                    this.cols = cols; this.rows = rows; this.cellSize = cellSize;
+                    this.originX = originX; this.originZ = originZ;
+                    this.grid = Array.from({ length: rows }, () => Array(cols).fill(null));
+                    this.drawCells();
+                },
+                drawCells() {
+                    const el = this.el;
+                    const { cols, rows, cellSize } = this;
+                    for (let r = 0; r < rows; r++) {
+                        for (let c = 0; c < cols; c++) {
+                            const x = this.originX + c * cellSize + cellSize / 2;
+                            const z = this.originZ + r * cellSize + cellSize / 2;
+                            const cell = document.createElement('a-plane');
+                            cell.setAttribute('position', `${x} 0.11 ${z}`);
+                            cell.setAttribute('rotation', '-90 0 0');
+                            cell.setAttribute('width', cellSize * 0.95);
+                            cell.setAttribute('height', cellSize * 0.95);
+                            cell.setAttribute('color', '#071428');
+                            cell.setAttribute('material', 'opacity:0.6');
+                            cell.classList.add('grid-cell');
+                            el.appendChild(cell);
+                        }
+                    }
+                },
+                worldPosForCell(c, r) {
+                    const x = this.originX + c * this.cellSize + this.cellSize / 2;
+                    const z = this.originZ + r * this.cellSize + this.cellSize / 2;
+                    return { x, y: 0.6, z };
+                },
+                cellForWorldPos(x, z) {
+                    const c = Math.floor((x - this.originX) / this.cellSize);
+                    const r = Math.floor((z - this.originZ) / this.cellSize);
+                    if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return null;
+                    return { c, r };
+                },
+                canPlace(shapeCells, baseC, baseR) {
+                    for (const [dx, dy] of shapeCells) {
+                        const c = baseC + dx, r = baseR + dy;
+                        if (c < 0 || c >= this.cols || r < 0 || r >= this.rows) return false;
+                        if (this.grid[r][c]) return false;
+                    }
+                    return true;
+                },
+                placePiece(shapeCells, baseC, baseR, color, entity) {
+                    for (const [dx, dy] of shapeCells) {
+                        const c = baseC + dx, r = baseR + dy;
+                        const pos = this.worldPosForCell(c, r);
+                        const cube = document.createElement('a-box');
+                        cube.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+                        cube.setAttribute('depth', 0.8); cube.setAttribute('height', 0.8); cube.setAttribute('width', 0.8);
+                        cube.setAttribute('color', color);
+                        cube.setAttribute('material', 'metalness:0.3; roughness:0.4');
+                        cube.classList.add('board-block');
+                        this.el.appendChild(cube);
+                        this.grid[r][c] = { entity: cube, color };
+                    }
+                    if (entity && entity.parentNode) entity.parentNode.removeChild(entity);
+                    this.el.emit('placed');
+                },
+                clearLines() {
+                    const rowsToClear = [];
+                    const colsToClear = [];
+                    for (let r = 0; r < this.rows; r++) {
+                        if (this.grid[r].every(cell => cell !== null)) rowsToClear.push(r);
+                    }
+                    for (let c = 0; c < this.cols; c++) {
+                        let full = true;
+                        for (let r = 0; r < this.rows; r++) if (!this.grid[r][c]) { full = false; break; }
+                        if (full) colsToClear.push(c);
+                    }
+                    const removed = rowsToClear.length + colsToClear.length;
+                    if (removed === 0) return 0;
+                    for (const r of rowsToClear) {
+                        for (let c = 0; c < this.cols; c++) {
+                            const cell = this.grid[r][c];
+                            if (cell && cell.entity) cell.entity.parentNode.removeChild(cell.entity);
+                            this.grid[r][c] = null;
+                        }
+                    }
+                    for (const c of colsToClear) {
+                        for (let r = 0; r < this.rows; r++) {
+                            const cell = this.grid[r][c];
+                            if (cell && cell.entity) cell.entity.parentNode.removeChild(cell.entity);
+                            this.grid[r][c] = null;
+                        }
+                    }
+                    for (let c = 0; c < this.cols; c++) {
+                        let write = this.rows - 1;
+                        for (let r = this.rows - 1; r >= 0; r--) {
+                            if (this.grid[r][c]) {
+                                if (write !== r) {
+                                    const cell = this.grid[r][c];
+                                    const pos = this.worldPosForCell(c, write);
+                                    cell.entity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+                                    this.grid[write][c] = cell;
+                                    this.grid[r][c] = null;
+                                }
+                                write--;
+                            }
+                        }
+                    }
+                    return removed;
+                },
+                isAnyPlacementPossible(shapes) {
+                    for (const shape of shapes) {
+                        for (let r = 0; r < this.rows; r++) {
+                            for (let c = 0; c < this.cols; c++) {
+                                if (this.canPlace(shape.cells, c, r)) return true;
+                            }
+                        }
+                    }
+                    return false;
                 }
-                write--;
-              }
+            });
+
+            AFRAME.registerComponent('piece-generator', {
+                schema: { tray: { type: 'boolean', default: false } },
+                init() {
+                    this.shapes = this.getShapes();
+                    this.trayEntities = [];
+                    this.spawnThree();
+                    const board = document.querySelector('#board');
+                    board.addEventListener('placed', () => {
+                        updatePiecesLeft();
+                    });
+                },
+                getShapes() {
+                    return [
+                        { name: 'I', cells: [[0, 0], [1, 0], [2, 0], [3, 0]], color: '#ff4d8d' },
+                        { name: 'O', cells: [[0, 0], [1, 0], [0, 1], [1, 1]], color: '#6a5cff' },
+                        { name: 'L', cells: [[0, 0], [0, 1], [0, 2], [1, 2]], color: '#00e0ff' },
+                        { name: 'T', cells: [[0, 1], [1, 0], [1, 1], [2, 1]], color: '#f97316' },
+                        { name: 'S', cells: [[1, 0], [2, 0], [0, 1], [1, 1]], color: '#22c55e' },
+                        { name: 'Z', cells: [[0, 0], [1, 0], [1, 1], [2, 1]], color: '#f43f5e' }
+                    ];
+                },
+                spawnThree() {
+                    for (const e of this.trayEntities) if (e.parentNode) e.parentNode.removeChild(e);
+                    this.trayEntities = [];
+                    this.currentShapes = [];
+                    for (let i = 0; i < 3; i++) {
+                        const shape = this.randomShape();
+                        this.currentShapes.push(shape);
+                        const x = (i - 1) * 2.2;
+                        const group = this.buildPieceEntity(shape, x, 0, 0);
+                        this.el.appendChild(group);
+                        this.trayEntities.push(group);
+                    }
+                    updatePiecesLeft();
+                },
+                randomShape() {
+                    const idx = Math.floor(Math.random() * this.shapes.length);
+                    const s = this.shapes[idx];
+                    return { name: s.name, cells: s.cells.map(c => [c[0], c[1]]), color: s.color };
+                },
+                buildPieceEntity(shape, x, y, z) {
+                    const group = document.createElement('a-entity');
+                    group.classList.add('piece');
+                    group.setAttribute('position', `${x} ${y} ${z}`);
+                    group.setAttribute('draggable', `shape:${JSON.stringify(shape.cells)}; color:${shape.color}`);
+                    const xs = shape.cells.map(c => c[0]); const ys = shape.cells.map(c => c[1]);
+                    const minX = Math.min(...xs), minY = Math.min(...ys);
+                    for (const [dx, dy] of shape.cells) {
+                        const cx = (dx - minX) * 0.9;
+                        const cz = (dy - minY) * -0.9;
+                        const cube = document.createElement('a-box');
+                        cube.setAttribute('position', `${cx} 0 ${cz}`);
+                        cube.setAttribute('depth', 0.8); cube.setAttribute('height', 0.8); cube.setAttribute('width', 0.8);
+                        cube.setAttribute('color', shape.color);
+                        cube.setAttribute('material', 'metalness:0.3; roughness:0.4');
+                        group.appendChild(cube);
+                    }
+                    return group;
+                }
+            });
+
+            AFRAME.registerComponent('draggable', {
+                schema: {
+                    shape: { type: 'string' },
+                    color: { type: 'string', default: '#fff' }
+                },
+                init() {
+                    this.shape = JSON.parse(this.data.shape);
+                    this.color = this.data.color;
+                    this.dragging = false;
+                    this.preview = null;
+                    this.scene = this.el.sceneEl;
+                    this.board = document.querySelector('#board').components['grid-system'];
+                    this.raycaster = new THREE.Raycaster();
+                    this.mouse = new THREE.Vector2();
+                    this.camera = this.scene.camera;
+                    this.onPointerDown = this.onPointerDown.bind(this);
+                    this.onPointerMove = this.onPointerMove.bind(this);
+                    this.onPointerUp = this.onPointerUp.bind(this);
+                    this.el.addEventListener('mousedown', this.onPointerDown);
+                    this.el.addEventListener('touchstart', this.onPointerDown);
+                    this.el.addEventListener('mouseenter', () => this.el.object3D.scale.set(1.05, 1.05, 1.05));
+                    this.el.addEventListener('mouseleave', () => this.el.object3D.scale.set(1, 1, 1));
+                },
+                AFRAME.registerComponent('draggable-piece', {
+                    schema: {
+                        shape: { type: 'array' },
+                        color: { type: 'string' }
+                    },
+
+                    init() {
+                        this.dragging = false;
+                        this.mouse = new THREE.Vector2();
+                        this.raycaster = new THREE.Raycaster();
+                        this.camera = this.el.sceneEl.camera;
+                        this.scene = this.el.sceneEl;
+                        this.board = document.querySelector('#board').components.board;
+                        this.preview = null;
+
+                        // Invisible collider so raycaster can click the piece
+                        this.el.setAttribute('geometry', {
+                            primitive: 'box',
+                            width: 2,
+                            height: 2,
+                            depth: 2
+                        });
+                        this.el.setAttribute('material', 'visible:false');
+
+                        this.el.addEventListener('mousedown', this.onPointerDown.bind(this));
+                        this.el.addEventListener('touchstart', this.onPointerDown.bind(this), { passive: false });
+                    },
+
+                    onPointerDown(evt) {
+                        evt.preventDefault();
+                        this.dragging = true;
+
+                        window.addEventListener('mousemove', this.onPointerMove);
+                        window.addEventListener('touchmove', this.onPointerMove, { passive: false });
+                        window.addEventListener('mouseup', this.onPointerUp);
+                        window.addEventListener('touchend', this.onPointerUp);
+
+                        // Lift piece to the unified plane
+                        this.el.object3D.position.y = 0.6;
+
+                        this.createPreview();
+                    },
+
+                    onPointerMove: (evt) => { }, // replaced below
+
+                    onPointerMove: function (evt) {
+                        if (!this.dragging) return;
+                        evt.preventDefault();
+
+                        const rect = this.scene.canvas.getBoundingClientRect();
+                        const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+                        const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+
+                        this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                        this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+                        this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                        // Unified horizontal plane at y = 0.6
+                        const planeY = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.6);
+                        const intersectPoint = new THREE.Vector3();
+                        this.raycaster.ray.intersectPlane(planeY, intersectPoint);
+
+                        if (!intersectPoint) return;
+
+                        // Move piece across the plane
+                        this.el.object3D.position.set(intersectPoint.x, 0.6, intersectPoint.z);
+
+                        // Preview logic
+                        const cell = this.board.cellForWorldPos(intersectPoint.x, intersectPoint.z);
+                        if (cell && this.board.canPlace(this.data.shape, cell.c, cell.r)) {
+                            this.showPreview(cell.c, cell.r, true);
+                        } else {
+                            this.showPreview(null, null, false);
+                        }
+                    },
+
+                    onPointerUp(evt) {
+                        if (!this.dragging) return;
+                        this.dragging = false;
+
+                        window.removeEventListener('mousemove', this.onPointerMove);
+                        window.removeEventListener('touchmove', this.onPointerMove);
+                        window.removeEventListener('mouseup', this.onPointerUp);
+                        window.removeEventListener('touchend', this.onPointerUp);
+
+                        const pos = this.el.object3D.position;
+                        const cell = this.board.cellForWorldPos(pos.x, pos.z);
+
+                        if (cell && this.board.canPlace(this.data.shape, cell.c, cell.r)) {
+                            this.board.placePiece(this.data.shape, cell.c, cell.r, this.data.color, this.el);
+                            const removed = this.board.clearLines();
+                            incrementScore(removed > 0 ? removed * 10 : 5);
+                            decrementTrayPiece();
+                        } else {
+                            this.returnToTray();
+                        }
+
+                        this.removePreview();
+                    },
+
+                    createPreview() {
+                        this.preview = document.createElement('a-entity');
+                        this.preview.setAttribute('id', 'preview');
+                        this.el.sceneEl.appendChild(this.preview);
+                    },
+
+                    showPreview(c, r, valid) {
+                        if (!this.preview) return;
+                        this.preview.innerHTML = '';
+
+                        if (c === null || r === null) return;
+
+                        const color = valid ? '#ffffff' : '#ff0000';
+
+                        this.data.shape.forEach(([dx, dz]) => {
+                            const ghost = document.createElement('a-box');
+                            ghost.setAttribute('color', color);
+                            ghost.setAttribute('opacity', 0.4);
+                            ghost.setAttribute('depth', 1);
+                            ghost.setAttribute('height', 1);
+                            ghost.setAttribute('width', 1);
+
+                            const world = this.board.worldPosForCell(c + dx, r + dz);
+                            ghost.setAttribute('position', `${world.x} 0.6 ${world.z}`);
+
+                            this.preview.appendChild(ghost);
+                        });
+                    },
+
+                    removePreview() {
+                        if (this.preview) this.preview.remove();
+                        this.preview = null;
+                    }
+                });
+
+                createPreview() {
+                    if (this.preview) return;
+                    this.preview = document.createElement('a-entity');
+                    this.preview.classList.add('preview');
+                    this.el.sceneEl.appendChild(this.preview);
+                },
+                showPreview(c, r, valid) {
+                    while (this.preview && this.preview.firstChild) this.preview.removeChild(this.preview.firstChild);
+                    if (!valid) return;
+                    for (const [dx, dy] of this.shape) {
+                        const pos = this.board.worldPosForCell(c + dx, r + dy);
+                        const ghost = document.createElement('a-box');
+                        ghost.setAttribute('position', `${pos.x} ${pos.y + 0.01} ${pos.z}`);
+                        ghost.setAttribute('depth', 0.8); ghost.setAttribute('height', 0.8); ghost.setAttribute('width', 0.8);
+                        ghost.setAttribute('color', this.color);
+                        ghost.setAttribute('material', 'opacity:0.45; transparent:true; emissive:#ffffff; emissiveIntensity:0.2');
+                        this.preview.appendChild(ghost);
+                    }
+                },
+                removePreview() {
+                    if (!this.preview) return;
+                    if (this.preview.parentNode) this.preview.parentNode.removeChild(this.preview);
+                    this.preview = null;
+                },
+                returnToTray() {
+                    const tray = document.querySelector('#tray');
+                    if (this.el.parentNode) this.el.parentNode.removeChild(this.el);
+                },
+                remove() {
+                    this.el.removeEventListener('mousedown', this.onPointerDown);
+                    this.el.removeEventListener('touchstart', this.onPointerDown);
+                }
+            });
+
+            let score = 0;
+            let piecesRemaining = 3;
+            function incrementScore(n) {
+                score += n;
+                document.getElementById('score').textContent = `Score: ${score}`;
             }
-          }
-          return removed;
-        },
-        isAnyPlacementPossible(shapes) {
-          for (const shape of shapes) {
-            for (let r=0;r<this.rows;r++){
-              for (let c=0;c<this.cols;c++){
-                if (this.canPlace(shape.cells, c, r)) return true;
-              }
+            function updatePiecesLeft() {
+                const tray = document.querySelector('#tray');
+                const pieces = tray.querySelectorAll('.piece');
+                piecesRemaining = pieces.length;
+                document.getElementById('piecesLeft').textContent = `Pieces left: ${piecesRemaining}`;
+                if (piecesRemaining === 0) {
+                    setTimeout(() => {
+                        const gen = document.querySelector('#tray').components['piece-generator'];
+                        gen.spawnThree();
+                        const boardComp = document.querySelector('#board').components['grid-system'];
+                        if (!boardComp.isAnyPlacementPossible(gen.currentShapes)) {
+                            document.getElementById('hint').setAttribute('value', 'Game Over — no placements possible');
+                        }
+                    }, 300);
+                }
             }
-          }
-          return false;
-        }
-      });
-
-      AFRAME.registerComponent('piece-generator', {
-        schema: { tray: {type: 'boolean', default: false} },
-        init() {
-          this.shapes = this.getShapes();
-          this.trayEntities = [];
-          this.spawnThree();
-          const board = document.querySelector('#board');
-          board.addEventListener('placed', () => {
-            updatePiecesLeft();
-          });
-        },
-        getShapes() {
-          return [
-            {name:'I', cells:[[0,0],[1,0],[2,0],[3,0]], color:'#ff4d8d'},
-            {name:'O', cells:[[0,0],[1,0],[0,1],[1,1]], color:'#6a5cff'},
-            {name:'L', cells:[[0,0],[0,1],[0,2],[1,2]], color:'#00e0ff'},
-            {name:'T', cells:[[0,1],[1,0],[1,1],[2,1]], color:'#f97316'},
-            {name:'S', cells:[[1,0],[2,0],[0,1],[1,1]], color:'#22c55e'},
-            {name:'Z', cells:[[0,0],[1,0],[1,1],[2,1]], color:'#f43f5e'}
-          ];
-        },
-        spawnThree() {
-          for (const e of this.trayEntities) if (e.parentNode) e.parentNode.removeChild(e);
-          this.trayEntities = [];
-          this.currentShapes = [];
-          for (let i=0;i<3;i++){
-            const shape = this.randomShape();
-            this.currentShapes.push(shape);
-            const x = (i-1)*2.2; 
-            const group = this.buildPieceEntity(shape, x, 0, 0);
-            this.el.appendChild(group);
-            this.trayEntities.push(group);
-          }
-          updatePiecesLeft();
-        },
-        randomShape() {
-          const idx = Math.floor(Math.random()*this.shapes.length);
-          const s = this.shapes[idx];
-          return {name:s.name, cells: s.cells.map(c=>[c[0], c[1]]), color: s.color};
-        },
-        buildPieceEntity(shape, x, y, z) {
-          const group = document.createElement('a-entity');
-          group.classList.add('piece');
-          group.setAttribute('position', `${x} ${y} ${z}`);
-          group.setAttribute('draggable', `shape:${JSON.stringify(shape.cells)}; color:${shape.color}`);
-          const xs = shape.cells.map(c=>c[0]); const ys = shape.cells.map(c=>c[1]);
-          const minX = Math.min(...xs), minY = Math.min(...ys);
-          for (const [dx, dy] of shape.cells) {
-            const cx = (dx - minX) * 0.9;
-            const cz = (dy - minY) * -0.9;
-            const cube = document.createElement('a-box');
-            cube.setAttribute('position', `${cx} 0 ${cz}`);
-            cube.setAttribute('depth', 0.8); cube.setAttribute('height', 0.8); cube.setAttribute('width', 0.8);
-            cube.setAttribute('color', shape.color);
-            cube.setAttribute('material', 'metalness:0.3; roughness:0.4');
-            group.appendChild(cube);
-          }
-          return group;
-        }
-      });
-
-      AFRAME.registerComponent('draggable', {
-        schema: {
-          shape: {type: 'string'}, 
-          color: {type: 'string', default: '#fff'}
-        },
-        init() {
-          this.shape = JSON.parse(this.data.shape);
-          this.color = this.data.color;
-          this.dragging = false;
-          this.preview = null;
-          this.scene = this.el.sceneEl;
-          this.board = document.querySelector('#board').components['grid-system'];
-          this.raycaster = new THREE.Raycaster();
-          this.mouse = new THREE.Vector2();
-          this.camera = this.scene.camera;
-          this.onPointerDown = this.onPointerDown.bind(this);
-          this.onPointerMove = this.onPointerMove.bind(this);
-          this.onPointerUp = this.onPointerUp.bind(this);
-          this.el.addEventListener('mousedown', this.onPointerDown);
-          this.el.addEventListener('touchstart', this.onPointerDown);
-          this.el.addEventListener('mouseenter', ()=> this.el.object3D.scale.set(1.05,1.05,1.05));
-          this.el.addEventListener('mouseleave', ()=> this.el.object3D.scale.set(1,1,1));
-        },
-        onPointerDown(evt) {
-          evt.preventDefault();
-          this.dragging = true;
-          window.addEventListener('mousemove', this.onPointerMove);
-          window.addEventListener('touchmove', this.onPointerMove, {passive:false});
-          window.addEventListener('mouseup', this.onPointerUp);
-          window.addEventListener('touchend', this.onPointerUp);
-          this.el.object3D.position.y = 1.6;
-          this.createPreview();
-        },
-        onPointerMove(evt) {
-          if (!this.dragging) return;
-          evt.preventDefault();
-          const rect = this.scene.canvas.getBoundingClientRect();
-          const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
-          const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-          this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-          this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-          this.raycaster.setFromCamera(this.mouse, this.camera);
-          const planeY = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
-          const intersectPoint = new THREE.Vector3();
-          this.raycaster.ray.intersectPlane(planeY, intersectPoint);
-          if (!intersectPoint) return;
-          this.el.object3D.position.x = intersectPoint.x;
-          this.el.object3D.position.z = intersectPoint.z;
-          const cell = this.board.cellForWorldPos(intersectPoint.x, intersectPoint.z);
-          if (cell && this.board.canPlace(this.shape, cell.c, cell.r)) {
-            this.showPreview(cell.c, cell.r, true);
-          } else {
-            this.showPreview(null, null, false);
-          }
-        },
-        onPointerUp(evt) {
-          if (!this.dragging) return;
-          this.dragging = false;
-          window.removeEventListener('mousemove', this.onPointerMove);
-          window.removeEventListener('touchmove', this.onPointerMove);
-          window.removeEventListener('mouseup', this.onPointerUp);
-          window.removeEventListener('touchend', this.onPointerUp);
-          const pos = this.el.object3D.position;
-          const cell = this.board.cellForWorldPos(pos.x, pos.z);
-          if (cell && this.board.canPlace(this.shape, cell.c, cell.r)) {
-            this.board.placePiece(this.shape, cell.c, cell.r, this.color, this.el);
-            const removed = this.board.clearLines();
-            if (removed > 0) {
-              incrementScore(removed * 10);
-            } else {
-              incrementScore(5);
+            function decrementTrayPiece() {
+                updatePiecesLeft();
             }
-            decrementTrayPiece();
-          } else {
-            this.returnToTray();
-          }
-          this.removePreview();
-        },
-        createPreview() {
-          if (this.preview) return;
-          this.preview = document.createElement('a-entity');
-          this.preview.classList.add('preview');
-          this.el.sceneEl.appendChild(this.preview);
-        },
-        showPreview(c, r, valid) {
-          while (this.preview && this.preview.firstChild) this.preview.removeChild(this.preview.firstChild);
-          if (!valid) return;
-          for (const [dx, dy] of this.shape) {
-            const pos = this.board.worldPosForCell(c+dx, r+dy);
-            const ghost = document.createElement('a-box');
-            ghost.setAttribute('position', `${pos.x} ${pos.y+0.01} ${pos.z}`);
-            ghost.setAttribute('depth', 0.8); ghost.setAttribute('height', 0.8); ghost.setAttribute('width', 0.8);
-            ghost.setAttribute('color', this.color);
-            ghost.setAttribute('material', 'opacity:0.45; transparent:true; emissive:#ffffff; emissiveIntensity:0.2');
-            this.preview.appendChild(ghost);
-          }
-        },
-        removePreview() {
-          if (!this.preview) return;
-          if (this.preview.parentNode) this.preview.parentNode.removeChild(this.preview);
-          this.preview = null;
-        },
-        returnToTray() {
-          const tray = document.querySelector('#tray');
-          if (this.el.parentNode) this.el.parentNode.removeChild(this.el);
-        },
-        remove() {
-          this.el.removeEventListener('mousedown', this.onPointerDown);
-          this.el.removeEventListener('touchstart', this.onPointerDown);
-        }
-      });
 
-      let score = 0;
-      let piecesRemaining = 3;
-      function incrementScore(n) {
-        score += n;
-        document.getElementById('score').textContent = `Score: ${score}`;
-      }
-      function updatePiecesLeft() {
-        const tray = document.querySelector('#tray');
-        const pieces = tray.querySelectorAll('.piece');
-        piecesRemaining = pieces.length;
-        document.getElementById('piecesLeft').textContent = `Pieces left: ${piecesRemaining}`;
-        if (piecesRemaining === 0) {
-          setTimeout(()=> {
-            const gen = document.querySelector('#tray').components['piece-generator'];
-            gen.spawnThree();
-            const boardComp = document.querySelector('#board').components['grid-system'];
-            if (!boardComp.isAnyPlacementPossible(gen.currentShapes)) {
-              document.getElementById('hint').setAttribute('value', 'Game Over — no placements possible');
-            }
-          }, 300);
-        }
-      }
-      function decrementTrayPiece() {
-        updatePiecesLeft();
-      }
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                location.reload();
+            });
 
-      document.getElementById('resetBtn').addEventListener('click', ()=> {
-        location.reload();
-      });
-
-      document.addEventListener('DOMContentLoaded', ()=> {
-        document.getElementById('score').textContent = `Score: ${score}`;
-        document.getElementById('piecesLeft').textContent = `Pieces left: 3`;
-      });
-    </script>
-  </a-scene>
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('score').textContent = `Score: ${score}`;
+                document.getElementById('piecesLeft').textContent = `Pieces left: 3`;
+            });
+        </script>
+    </a-scene>
 </body>
+
 </html>
