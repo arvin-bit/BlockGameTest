@@ -310,7 +310,7 @@
           this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
           this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
           this.raycaster.setFromCamera(this.mouse, this.camera);
-          const planeY = new THREE.Plane(new THREE.Vector3(0,1,0), -0.6);
+          const planeY = new THREE.Plane(new THREE.Vector3(0,1,0), 0);
           const intersectPoint = new THREE.Vector3();
           this.raycaster.ray.intersectPlane(planeY, intersectPoint);
           if (!intersectPoint) return;
